@@ -6,7 +6,7 @@
 
 ## Overview
 
-Official Europe Amazon Pay extension.
+Amazon Pay extension for Europe.
 
 For more information, please visit the [module developer's website](https://marketplace.magento.com/creativestyle-creativestyle-amazonpayments.html?ld=NSGoogle).
 
