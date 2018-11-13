@@ -3,7 +3,7 @@
  * This file is part of the official Amazon Pay and Login with Amazon extension
  * for Magento 1.x
  *
- * (c) 2014 - 2017 creativestyle GmbH. All Rights reserved
+ * (c) 2014 - 2018 creativestyle GmbH. All Rights reserved
  *
  * Distribution of the derivatives reusing, transforming or being built upon
  * this software, is not allowed without explicit written permission granted
@@ -11,7 +11,7 @@
  *
  * @category   Creativestyle
  * @package    Creativestyle_AmazonPayments
- * @copyright  2014 - 2017 creativestyle GmbH
+ * @copyright  2014 - 2018 creativestyle GmbH
  * @author     Marek Zabrowarny <ticket@creativestyle.de>
  */
 class Creativestyle_AmazonPayments_Model_Simulator
@@ -137,8 +137,9 @@ class Creativestyle_AmazonPayments_Model_Simulator
                         $simulationString = Mage::helper('core')->jsonEncode($simulation);
                         if ($transactionType == 'OrderReference' && $simulationData['state'] == 'Closed') {
                             $amazonOrderReferenceId = $payment->getAdditionalInformation('amazon_order_reference_id');
-                            Mage::getSingleton('amazonpayments/api_advanced')
-                                ->closeOrderReference($amazonOrderReferenceId, $simulationString);
+                            /** @var Creativestyle_AmazonPayments_Model_Api_Pay $api */
+                            $api = Mage::getSingleton('amazonpayments/api_pay');
+                            $api->closeOrderReference(null, $amazonOrderReferenceId, $simulationString);
                         }
 
                         $payment->setAdditionalInformation('_simulation_data', null);

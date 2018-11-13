@@ -26,8 +26,8 @@
             <p style="clear:both;"><?php echo $this->__('This extension integrates easily your Magento shop with Amazon Pay service.'); ?></p>
         </div>
     </div>
-    <?php echo $this->getSellerCentralConfigHtml(); ?>
     <?php echo $this->getRegisterHtml(); ?>
+    <?php echo $this->getSellerCentralConfigHtml(); ?>
 </div>
 <script type="text/javascript">//<![CDATA[
     document.observe('dom:loaded', function() {
@@ -35,11 +35,11 @@
             config: {
                 unique_id: '<?php echo $this->getUniqueId(); ?>',
                 fields: {
-                    merchant_id: $('amazonpayments_account_merchant_id'),
-                    client_id: $('amazonpayments_account_client_id'),
-                    access_key: $('amazonpayments_account_access_key'),
-                    secret_key: $('amazonpayments_account_secret_key'),
-                    region: $('amazonpayments_account_region')
+                    merchant_id: $('amazonpayments_basic_merchant_id'),
+                    client_id: $('amazonpayments_basic_client_id'),
+                    access_key: $('amazonpayments_basic_access_key'),
+                    secret_key: $('amazonpayments_basic_secret_key'),
+                    region: $('amazonpayments_basic_region')
                 },
                 layers: {
                     seller_central: 'simple-path-seller-central'

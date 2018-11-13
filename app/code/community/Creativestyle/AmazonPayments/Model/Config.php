@@ -3,7 +3,7 @@
  * This file is part of the official Amazon Pay and Login with Amazon extension
  * for Magento 1.x
  *
- * (c) 2014 - 2017 creativestyle GmbH. All Rights reserved
+ * (c) 2014 - 2018 creativestyle GmbH. All Rights reserved
  *
  * Distribution of the derivatives reusing, transforming or being built upon
  * this software, is not allowed without explicit written permission granted
@@ -11,7 +11,7 @@
  *
  * @category   Creativestyle
  * @package    Creativestyle_AmazonPayments
- * @copyright  2014 - 2017 creativestyle GmbH
+ * @copyright  2014 - 2018 creativestyle GmbH
  * @author     Marek Zabrowarny <ticket@creativestyle.de>
  */
 class Creativestyle_AmazonPayments_Model_Config
@@ -19,20 +19,21 @@ class Creativestyle_AmazonPayments_Model_Config
     const XML_PATH_ACCOUNT_MERCHANT_ID          = 'amazonpayments/account/merchant_id';
     const XML_PATH_ACCOUNT_ACCESS_KEY           = 'amazonpayments/account/access_key';
     const XML_PATH_ACCOUNT_SECRET_KEY           = 'amazonpayments/account/secret_key';
+    const XML_PATH_LOGIN_CLIENT_ID              = 'amazonpayments/account/client_id';
     const XML_PATH_ACCOUNT_REGION               = 'amazonpayments/account/region';
 
     const XML_PATH_GENERAL_ACTIVE               = 'amazonpayments/general/active';
+    const XML_PATH_GENERAL_CHECKOUT_TYPE        = 'amazonpayments/general/checkout_type';
+    const XML_PATH_GENERAL_ENVIRONMENT          = 'amazonpayments/general/environment';
     const XML_PATH_GENERAL_SANDBOX              = 'amazonpayments/general/sandbox';
     const XML_PATH_GENERAL_SANDBOX_TOOLBOX      = 'amazonpayments/general/sandbox_toolbox';
     const XML_PATH_GENERAL_PAYMENT_ACTION       = 'amazonpayments/general/payment_action';
     const XML_PATH_GENERAL_AUTHORIZATION_MODE   = 'amazonpayments/general/authorization_mode';
     const XML_PATH_GENERAL_IPN_ACTIVE           = 'amazonpayments/general/ipn_active';
-    const XML_PATH_GENERAL_NEW_ORDER_STATUS     = 'amazonpayments/general/new_order_status';
-    const XML_PATH_GENERAL_ORDER_STATUS         = 'amazonpayments/general/authorized_order_status';
+
     const XML_PATH_GENERAL_RECENT_POLLED_TXN    = 'amazonpayments/general/recent_polled_transaction';
 
     const XML_PATH_LOGIN_ACTIVE                 = 'amazonpayments/general/login_active';
-    const XML_PATH_LOGIN_CLIENT_ID              = 'amazonpayments/account/client_id';
     const XML_PATH_LOGIN_LANGUAGE               = 'amazonpayments/general/language';
     const XML_PATH_LOGIN_AUTHENTICATION         = 'amazonpayments/general/authentication';
 
@@ -63,6 +64,16 @@ class Creativestyle_AmazonPayments_Model_Config
 
     const XML_PATH_DEVELOPER_ALLOWED_IPS        = 'amazonpayments/developer/allowed_ips';
     const XML_PATH_DEVELOPER_LOG_ACTIVE         = 'amazonpayments/developer/log_active';
+
+    /**
+     * Custom order statuses
+     */
+    const XML_PATH_GENERAL_NEW_ORDER_STATUS             = 'amazonpayments/general/new_order_status';
+    const XML_PATH_GENERAL_ORDER_STATUS                 = 'amazonpayments/general/authorized_order_status';
+    const XML_PATH_INVALID_PAYMENT_METHOD_ORDER_STATUS  = 'amazonpayments/general/invalid_payment_method_order_status';
+    const XML_PATH_TRANSACTION_TIMED_OUT_ORDER_STATUS   = 'amazonpayments/general/transaction_timed_out_order_status';
+    const XML_PATH_AMAZON_REJECTED_ORDER_STATUS         = 'amazonpayments/general/amazon_rejected_order_status';
+    const XML_PATH_PROCESSING_FAILURE_ORDER_STATUS      = 'amazonpayments/general/processing_failure_order_status';
 
     /**
      * Global config data array
@@ -118,6 +129,17 @@ class Creativestyle_AmazonPayments_Model_Config
     }
 
     /**
+     * @param mixed|null $store
+     * @return string
+     */
+    public function getCheckoutType($store = null)
+    {
+        return $this->isLoginActive($store)
+            ? Mage::getStoreConfig(self::XML_PATH_GENERAL_CHECKOUT_TYPE, $store)
+            : Creativestyle_AmazonPayments_Model_Lookup_CheckoutType::CHECKOUT_TYPE_AMAZON;
+    }
+
+    /**
      * Checks whether IPN is enabled
      *
      * @param mixed|null $store
@@ -129,6 +151,17 @@ class Creativestyle_AmazonPayments_Model_Config
     }
 
     /**
+     * Returns current run mode (sandbox vs. live)
+     *
+     * @param mixed|null $store
+     * @return bool
+     */
+    public function getEnvironment($store = null)
+    {
+        return Mage::getStoreConfig(self::XML_PATH_GENERAL_ENVIRONMENT, $store);
+    }
+
+    /**
      * Checks whether extension runs in sandbox mode
      *
      * @param mixed|null $store
@@ -136,7 +169,8 @@ class Creativestyle_AmazonPayments_Model_Config
      */
     public function isSandboxActive($store = null)
     {
-        return Mage::getStoreConfigFlag(self::XML_PATH_GENERAL_SANDBOX, $store);
+        return $this->getEnvironment($store) ==
+            Creativestyle_AmazonPayments_Model_Lookup_Environment::ENVIRONMENT_SANDBOX;
     }
 
     /**
@@ -174,6 +208,28 @@ class Creativestyle_AmazonPayments_Model_Config
     }
 
     /**
+     * Returns Access Key for the configured Amazon merchant account
+     *
+     * @param mixed|null $store
+     * @return string
+     */
+    public function getAccessKey($store = null)
+    {
+        return trim(Mage::getStoreConfig(self::XML_PATH_ACCOUNT_ACCESS_KEY, $store));
+    }
+
+    /**
+     * Returns Secret Key for the configured Amazon merchant account
+     *
+     * @param mixed|null $store
+     * @return string
+     */
+    public function getSecretKey($store = null)
+    {
+        return trim(Mage::getStoreConfig(self::XML_PATH_ACCOUNT_SECRET_KEY, $store));
+    }
+
+    /**
      * Returns Amazon app client ID
      *
      * @param mixed|null $store
@@ -194,9 +250,15 @@ class Creativestyle_AmazonPayments_Model_Config
     {
         switch (Mage::getStoreConfig(self::XML_PATH_ACCOUNT_REGION, $store)) {
             case 'EUR':
+            case 'EUR_DE':
+            case 'EUR_FR':
+            case 'EUR_IT':
+            case 'EUR_ES':
                 return 'de';
             case 'GBP':
                 return 'uk';
+            case 'USD':
+                return 'us';
             default:
                 return null;
         }
@@ -412,7 +474,7 @@ class Creativestyle_AmazonPayments_Model_Config
     {
         if (!$this->isLoginActive()) {
             $buttonUrls = $this->getGlobalConfigData('button_urls');
-            $env = $this->isSandboxActive($store) ? 'sandbox' : 'live';
+            $env = $this->getEnvironment($store);
             if (isset($buttonUrls[$this->getRegion($store)][$env])) {
                 return sprintf(
                     '%s?sellerId=%s&amp;size=%s&amp;color=%s',
@@ -484,6 +546,7 @@ class Creativestyle_AmazonPayments_Model_Config
      *
      * @param mixed|null $store
      * @return string
+     * @throws Varien_Exception
      */
     public function getHoldedOrderStatus($store = null)
     {
@@ -491,6 +554,54 @@ class Creativestyle_AmazonPayments_Model_Config
             ->setStore($store)
             ->loadDefaultByState(Mage_Sales_Model_Order::STATE_HOLDED)
             ->getStatus();
+    }
+
+    /**
+     * Returns order status for declined authorization
+     * with InvalidPaymentMethod reason code
+     *
+     * @param mixed|null $store
+     * @return string
+     */
+    public function getInvalidPaymentMethodOrderStatus($store = null)
+    {
+        return Mage::getStoreConfig(self::XML_PATH_INVALID_PAYMENT_METHOD_ORDER_STATUS, $store);
+    }
+
+    /**
+     * Returns order status for declined authorization
+     * with TransactionTimedOut reason code
+     *
+     * @param mixed|null $store
+     * @return string
+     */
+    public function getTransactionTimedOutOrderStatus($store = null)
+    {
+        return Mage::getStoreConfig(self::XML_PATH_TRANSACTION_TIMED_OUT_ORDER_STATUS, $store);
+    }
+
+    /**
+     * Returns order status for declined authorization
+     * with AmazonRejected reason code
+     *
+     * @param mixed|null $store
+     * @return string
+     */
+    public function getAmazonRejectedOrderStatus($store = null)
+    {
+        return Mage::getStoreConfig(self::XML_PATH_AMAZON_REJECTED_ORDER_STATUS, $store);
+    }
+
+    /**
+     * Returns order status for declined authorization
+     * with ProcessingFailure reason code
+     *
+     * @param mixed|null $store
+     * @return string
+     */
+    public function getProcessingFailureOrderStatus($store = null)
+    {
+        return Mage::getStoreConfig(self::XML_PATH_PROCESSING_FAILURE_ORDER_STATUS, $store);
     }
 
     /**
@@ -613,12 +724,12 @@ class Creativestyle_AmazonPayments_Model_Config
     {
         return array(
             'merchantId' => $this->getMerchantId($store),
-            'accessKey' => trim(Mage::getStoreConfig(self::XML_PATH_ACCOUNT_ACCESS_KEY, $store)),
-            'secretKey' => trim(Mage::getStoreConfig(self::XML_PATH_ACCOUNT_SECRET_KEY, $store)),
+            'accessKey' => $this->getAccessKey($store),
+            'secretKey' => $this->getSecretKey($store),
             'applicationName' => 'Creativestyle Amazon Payments Advanced Magento Extension',
             'applicationVersion' => Mage::getConfig()->getNode('modules/Creativestyle_AmazonPayments/version'),
             'region' => $this->getRegion($store),
-            'environment' => $this->isSandboxActive($store) ? 'sandbox' : 'live',
+            'environment' => $this->getEnvironment($store),
             'serviceUrl' => null,
             'widgetUrl' => null,
             'caBundleFile' => $this->getCaBundlePath(),
@@ -666,8 +777,8 @@ class Creativestyle_AmazonPayments_Model_Config
     public function getLoginApiUrl($store = null)
     {
         $apiUrls = $this->getGlobalConfigData('login_api_urls');
-        if (isset($apiUrls[$this->getRegion($store)][$this->isSandboxActive($store) ? 'sandbox' : 'live'])) {
-            return $apiUrls[$this->getRegion($store)][$this->isSandboxActive($store) ? 'sandbox' : 'live'];
+        if (isset($apiUrls[$this->getRegion($store)][$this->getEnvironment($store)])) {
+            return $apiUrls[$this->getRegion($store)][$this->getEnvironment($store)];
         }
 
         return '';
@@ -678,6 +789,7 @@ class Creativestyle_AmazonPayments_Model_Config
      *
      * @param mixed|null $store
      * @return string
+     * @throws Mage_Core_Model_Store_Exception
      */
     public function getStoreName($store = null)
     {
@@ -691,6 +803,7 @@ class Creativestyle_AmazonPayments_Model_Config
      *
      * @param mixed|null $store
      * @return string
+     * @throws Mage_Core_Model_Store_Exception
      */
     public function getSoftDescriptor($store = null)
     {
@@ -743,6 +856,14 @@ class Creativestyle_AmazonPayments_Model_Config
      */
     public function isMultiCurrencyEnabled()
     {
-        return (bool)$this->getGlobalConfigData('multi_currency');
+        return true;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isExtendedConfigEnabled()
+    {
+        return (bool)$this->getGlobalConfigData('extended_config');
     }
 }

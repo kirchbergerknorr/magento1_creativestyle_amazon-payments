@@ -3,7 +3,7 @@
  * This file is part of the official Amazon Pay and Login with Amazon extension
  * for Magento 1.x
  *
- * (c) 2017 creativestyle GmbH. All Rights reserved
+ * (c) 2017 - 2018 creativestyle GmbH. All Rights reserved
  *
  * Distribution of the derivatives reusing, transforming or being built upon
  * this software, is not allowed without explicit written permission granted
@@ -11,7 +11,7 @@
  *
  * @category   Creativestyle
  * @package    Creativestyle_AmazonPayments
- * @copyright  2017 creativestyle GmbH
+ * @copyright  2017 - 2018 creativestyle GmbH
  * @author     Marek Zabrowarny <ticket@creativestyle.de>
  */
 class Creativestyle_AmazonPayments_IpnController extends Creativestyle_AmazonPayments_Controller_Action
@@ -45,7 +45,9 @@ class Creativestyle_AmazonPayments_IpnController extends Creativestyle_AmazonPay
      */
     protected function _getApi()
     {
-        return Mage::getModel('amazonpayments/api_ipn');
+        /** @var Creativestyle_AmazonPayments_Model_Api_Ipn $api */
+        $api = Mage::getSingleton('amazonpayments/api_ipn');
+        return $api;
     }
 
     /**
@@ -53,6 +55,7 @@ class Creativestyle_AmazonPayments_IpnController extends Creativestyle_AmazonPay
      *
      * @param string $headerId
      * @return false|string
+     * @throws Zend_Controller_Request_Exception
      */
     protected function _getRequestHeaderById($headerId)
     {
@@ -134,8 +137,7 @@ class Creativestyle_AmazonPayments_IpnController extends Creativestyle_AmazonPay
         try {
             $transactionId = null;
 
-            /** @var OffAmazonPaymentsNotifications_Model_NotificationImpl $notification */
-            $notification = $this->_getApi()->parseMessage(
+            $notification = $this->_getApi()->parseNotification(
                 $this->_getRequestHeaders(),
                 $this->getRequest()->getRawBody()
             );
@@ -143,21 +145,17 @@ class Creativestyle_AmazonPayments_IpnController extends Creativestyle_AmazonPay
             $transactionId = $this->_getApi()->processNotification($notification);
             $responseError = null;
             $responseCode = $this->_prepareIpnResponse(200);
-        } catch (OffAmazonPaymentsNotifications_InvalidMessageException $e) {
-            Creativestyle_AmazonPayments_Model_Logger::logException($e);
-            $responseError = $e->getMessage();
-            $responseCode = $this->_prepareIpnResponse(400, $responseError);
         } catch (Exception $e) {
             Creativestyle_AmazonPayments_Model_Logger::logException($e);
             $responseError = $e->getMessage();
-            $responseCode = $this->_prepareIpnResponse($e->getCode(), $responseError);
+            $responseCode = $this->_prepareIpnResponse(400, $responseError);
         }
 
         if ($notification) {
             Mage::dispatchEvent(
                 'amazonpayments_ipn_request',
                 array('call_data' => array(
-                    'notification_type' => $notification->getNotificationType(),
+                    'notification_type' => $notification['NotificationType'],
                     'transaction_id'    => $transactionId,
                     'response_code'     => $responseCode,
                     'response_error'    => $responseError,

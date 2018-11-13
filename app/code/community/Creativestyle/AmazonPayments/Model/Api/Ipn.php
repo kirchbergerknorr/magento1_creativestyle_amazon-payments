@@ -3,85 +3,51 @@
  * This file is part of the official Amazon Pay and Login with Amazon extension
  * for Magento 1.x
  *
- * (c) 2014 - 2017 creativestyle GmbH. All Rights reserved
+ * (c) 2014 - 2018 creativestyle GmbH. All Rights reserved
  *
  * Distribution of the derivatives reusing, transforming or being built upon
  * this software, is not allowed without explicit written permission granted
  * by creativestyle GmbH
  *
  * @package    Creativestyle\AmazonPayments\Model\Api
- * @copyright  2014 - 2017 creativestyle GmbH
+ * @copyright  2014 - 2018 creativestyle GmbH
  * @author     Marek Zabrowarny <ticket@creativestyle.de>
  */
-class Creativestyle_AmazonPayments_Model_Api_Ipn extends Creativestyle_AmazonPayments_Model_Api_Abstract
+class Creativestyle_AmazonPayments_Model_Api_Ipn
 {
-    const NOTIFICATION_TYPE_ORDER_REFERENCE = 'OrderReferenceNotification';
-    const NOTIFICATION_TYPE_AUTHORIZATION   = 'AuthorizationNotification';
-    const NOTIFICATION_TYPE_CAPTURE         = 'CaptureNotification';
-    const NOTIFICATION_TYPE_REFUND          = 'RefundNotification';
-
     /**
-     * @return OffAmazonPaymentsNotifications_Client
+     * @param array $headers
+     * @param string $body
+     * @return AmazonPay_IpnHandlerInterface
      */
-    protected function _getApi()
+    protected function _getHandler($headers, $body)
     {
-        if (null === $this->_api) {
-            $this->_api = new OffAmazonPaymentsNotifications_Client(
-                $this->_getConfig()->getApiConnectionParams($this->_store)
-            );
-        }
-
-        return $this->_api;
+        return new AmazonPay_IpnHandler($headers, $body);
     }
 
     /**
      * Extracts transaction data from IPN notification
      *
-     * @param OffAmazonPaymentsNotifications_Model_NotificationImpl $notification
+     * @param array $notification
      * @return array
      * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _getTransactionDetailsFromNotification($notification)
     {
-        switch ($notification->getNotificationType()) {
-            case self::NOTIFICATION_TYPE_ORDER_REFERENCE:
-                /** @var OffAmazonPaymentsNotifications_Model_OrderReferenceNotification $notification */
-                if ($notification->isSetOrderReference()) {
-                    return array(null, $notification->getOrderReference()->getAmazonOrderReferenceId());
-                }
-                break;
-            case self::NOTIFICATION_TYPE_AUTHORIZATION:
-                /** @var OffAmazonPaymentsNotifications_Model_AuthorizationNotification $notification */
-                if ($notification->isSetAuthorizationDetails()) {
-                    return array(null, $notification->getAuthorizationDetails()->getAmazonAuthorizationId());
-                }
-                break;
-            case self::NOTIFICATION_TYPE_CAPTURE:
-                /** @var OffAmazonPaymentsNotifications_Model_CaptureNotification $notification */
-                if ($notification->isSetCaptureDetails()) {
-                    return array(
-                        $notification->getCaptureDetails(),
-                        $notification->getCaptureDetails()->getAmazonCaptureId()
-                    );
-                }
-                break;
-            case self::NOTIFICATION_TYPE_REFUND:
-                /** @var OffAmazonPaymentsNotifications_Model_RefundNotification $notification */
-                if ($notification->isSetRefundDetails()) {
-                    return array(
-                        $notification->getRefundDetails(),
-                        $notification->getRefundDetails()->getAmazonRefundId()
-                    );
-                }
-                break;
-            default:
-                throw new Creativestyle_AmazonPayments_Exception('Unknown IPN notification type', 500);
+        if (isset($notification['OrderReference'])) {
+            return array($notification['OrderReference'], $notification['OrderReference']['AmazonOrderReferenceId']);
+        } elseif (isset($notification['AuthorizationDetails'])) {
+            return array(
+                $notification['AuthorizationDetails'],
+                $notification['AuthorizationDetails']['AmazonAuthorizationId']
+            );
+        } elseif (isset($notification['CaptureDetails'])) {
+            return array($notification['CaptureDetails'], $notification['CaptureDetails']['AmazonCaptureId']);
+        } elseif (isset($notification['RefundDetails'])) {
+            return array($notification['RefundDetails'], $notification['RefundDetails']['AmazonRefundId']);
         }
 
-        throw new Creativestyle_AmazonPayments_Exception(
-            sprintf('Invalid IPN %s data', $notification->getNotificationType()),
-            400
-        );
+        throw new Creativestyle_AmazonPayments_Exception('Invalid IPN notification data', 500);
     }
 
     /**
@@ -108,12 +74,13 @@ class Creativestyle_AmazonPayments_Model_Api_Ipn extends Creativestyle_AmazonPay
     }
 
     /**
-     * @param $transactionId
+     * @param string $transactionId
      * @return Mage_Sales_Model_Order_Payment
      * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _lookupPaymentByTransactionId($transactionId)
     {
+        /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load($this->_lookupOrderIdByTransactionId($transactionId));
         if ($order->getId()) {
             return $order->getPayment();
@@ -123,45 +90,57 @@ class Creativestyle_AmazonPayments_Model_Api_Ipn extends Creativestyle_AmazonPay
     }
 
     /**
-     * Converts a http POST body and headers into a notification object
+     * Converts a IPN request body and headers into a notification array
      *
      * @param array $headers
      * @param string $body
-     * @return OffAmazonPaymentsNotifications_Model_NotificationImpl
+     * @return array
      */
-    public function parseMessage($headers, $body)
+    public function parseNotification($headers, $body)
     {
-        return $this->_getApi()->parseRawMessage($headers, $body);
+        return $this->_getHandler($headers, $body)->toArray();
     }
 
     /**
-     * Process notification object and updates corresponding sales entities
-     *
-     * @param OffAmazonPaymentsNotifications_Model_NotificationImpl $notification
-     * @return string|null
+     * @param array $notification
+     * @return string
      * @throws Creativestyle_AmazonPayments_Exception
+     * @throws Mage_Core_Exception
+     * @throws Exception
      */
-    public function processNotification($notification)
+    public function processNotification(array $notification)
     {
-        if ($notification) {
-            list($transactionDetails, $transactionId) = $this->_getTransactionDetailsFromNotification($notification);
+        list($transactionDetails, $transactionId) = $this->_getTransactionDetailsFromNotification($notification);
 
-            if ($notification->getNotificationType() == self::NOTIFICATION_TYPE_AUTHORIZATION) {
-                if (preg_match('/-sync$/', $notification->getAuthorizationDetails()->getAuthorizationReferenceId())) {
-                    return $transactionId;
-                }
-            }
-
-            $payment = $this->_lookupPaymentByTransactionId($transactionId);
-            $transaction = $payment->lookupTransaction($transactionId);
-            $payment->getMethodInstance()
-                ->importTransactionDetails($payment, $transaction, new Varien_Object(), $transactionDetails);
-            $payment->getOrder()
-                ->addRelatedObject($transaction)
-                ->save();
+        if (isset($transactionDetails['AuthorizationReferenceId'])
+            && preg_match('/-sync$/', $transactionDetails['AuthorizationReferenceId'])) {
             return $transactionId;
         }
 
-        throw new Creativestyle_AmazonPayments_Exception('Invalid IPN notification data', 400);
+        $payment = $this->_lookupPaymentByTransactionId($transactionId);
+        $transaction = $payment->lookupTransaction($transactionId);
+
+        /** @var Creativestyle_AmazonPayments_Model_Payment_Abstract $methodInstance */
+        $methodInstance = $payment->getMethodInstance();
+        $methodInstance->importTransactionDetails($payment, $transaction, new Varien_Object(), $transactionDetails);
+
+        $payment->getOrder()
+            ->addRelatedObject($transaction)
+            ->save();
+
+        return $transactionId;
+    }
+
+    /**
+     * @param array $headers
+     * @param string $body
+     * @return string
+     * @throws Creativestyle_AmazonPayments_Exception
+     * @throws Mage_Core_Exception
+     */
+    public function parseAndProcessNotification($headers, $body)
+    {
+        $notification = $this->parseNotification($headers, $body);
+        return $this->processNotification($notification);
     }
 }

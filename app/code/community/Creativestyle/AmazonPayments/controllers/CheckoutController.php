@@ -3,7 +3,7 @@
  * This file is part of the official Amazon Pay and Login with Amazon extension
  * for Magento 1.x
  *
- * (c) 2014 - 2017 creativestyle GmbH. All Rights reserved
+ * (c) 2014 - 2018 creativestyle GmbH. All Rights reserved
  *
  * Distribution of the derivatives reusing, transforming or being built upon
  * this software, is not allowed without explicit written permission granted
@@ -11,25 +11,11 @@
  *
  * @category   Creativestyle
  * @package    Creativestyle_AmazonPayments
- * @copyright  2014 - 2017 creativestyle GmbH
+ * @copyright  2014 - 2018 creativestyle GmbH
  * @author     Marek Zabrowarny <ticket@creativestyle.de>
  */
-class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controller_Front_Action
+class Creativestyle_AmazonPayments_CheckoutController extends Creativestyle_AmazonPayments_Controller_Checkout
 {
-    /**
-     * Current order reference ID
-     *
-     * @var string|null
-     */
-    protected $_orderReferenceId = null;
-
-    /**
-     * Current access token value
-     *
-     * @var string|null
-     */
-    protected $_accessToken = null;
-
     /**
      * Returns Amazon checkout instance
      *
@@ -37,59 +23,15 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
      */
     protected function _getCheckout()
     {
-        return Mage::getSingleton('amazonpayments/checkout');
+        /** @var Creativestyle_AmazonPayments_Model_Checkout $checkout */
+        $checkout = Mage::getSingleton('amazonpayments/checkout');
+        return $checkout;
     }
 
     /**
-     * Returns checkout session instance
-     *
-     * @return Mage_Checkout_Model_Session
+     * @return string
+     * @throws Mage_Core_Exception
      */
-    protected function _getCheckoutSession()
-    {
-        return Mage::getSingleton('checkout/session');
-    }
-
-    /**
-     * Returns saved order reference ID
-     *
-     * @return string|null
-     */
-    protected function _getOrderReferenceId()
-    {
-        return $this->_orderReferenceId;
-    }
-
-    /**
-     * Returns saved access token
-     *
-     * @return string|null
-     */
-    protected function _getAccessToken()
-    {
-        return $this->_accessToken;
-    }
-
-    /**
-     * Returns Amazon Pay API adapter instance
-     *
-     * @return Creativestyle_AmazonPayments_Model_Api_Advanced
-     */
-    protected function _getApi()
-    {
-        return Mage::getModel('amazonpayments/api_advanced');
-    }
-
-    /**
-     * Returns current quote entity
-     *
-     * @return Mage_Sales_Model_Quote
-     */
-    protected function _getQuote()
-    {
-        return $this->_getCheckout()->getQuote();
-    }
-
     protected function _getShippingMethodsHtml()
     {
         $layout = $this->getLayout();
@@ -101,6 +43,10 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
         return $output;
     }
 
+    /**
+     * @return string
+     * @throws Mage_Core_Exception
+     */
     protected function _getReviewHtml()
     {
         $layout = $this->getLayout();
@@ -124,82 +70,6 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
         }
 
         return true;
-    }
-
-    /**
-     * Clear Order Reference ID in controller properties
-     * and in session data and return its value
-     */
-    protected function _clearOrderReferenceId()
-    {
-        $this->_orderReferenceId = null;
-        $this->_getCheckoutSession()->setAmazonOrderReferenceId(null);
-    }
-
-    /**
-     * Cancels order reference at Amazon Payments gateway
-     * and clears corresponding session data
-     */
-    protected function _cancelOrderReferenceId()
-    {
-        if ($this->_orderReferenceId) {
-            $this->_getApi()->cancelOrderReference($this->_orderReferenceId);
-            $this->_clearOrderReferenceId();
-        }
-    }
-
-    /**
-     * Send Ajax redirect response
-     *
-     * @return $this
-     */
-    protected function _ajaxRedirectResponse()
-    {
-        $this->getResponse()
-            ->setHeader('HTTP/1.1', '403 Session Expired')
-            ->setHeader('Login-Required', 'true')
-            ->sendResponse();
-        return $this;
-    }
-
-    /**
-     * Validate ajax request and redirect on failure
-     *
-     * @return bool
-     */
-    protected function _expireAjax()
-    {
-        if (!$this->_getQuote()->hasItems() || $this->_getQuote()->getHasError()) {
-            $this->_ajaxRedirectResponse();
-            return true;
-        }
-
-        if ($this->_getCheckoutSession()->getCartWasUpdated(true)) {
-            $this->_ajaxRedirectResponse();
-            return true;
-        }
-
-        if (null === $this->_getOrderReferenceId()) {
-            $this->_ajaxRedirectResponse();
-            return true;
-        }
-
-        return false;
-    }
-
-    public function preDispatch()
-    {
-        parent::preDispatch();
-        $this->_orderReferenceId = $this->getRequest()->getParam(
-            'orderReferenceId',
-            $this->_getCheckoutSession()->getAmazonOrderReferenceId()
-        );
-        $this->_accessToken = $this->getRequest()->getParam(
-            'accessToken',
-            $this->_getCheckoutSession()->getAmazonAccessToken()
-        );
-        $this->_getCheckoutSession()->setAmazonOrderReferenceId($this->_orderReferenceId);
-        $this->_getCheckoutSession()->setAmazonAccessToken($this->_accessToken);
     }
 
     public function indexAction()
@@ -227,6 +97,19 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
             $this->_getCheckoutSession()->setCartWasUpdated(false);
             $this->_getCheckout()->savePayment(null);
 
+            if ($this->_getConfig()->getCheckoutType() ==
+                Creativestyle_AmazonPayments_Model_Lookup_CheckoutType::CHECKOUT_TYPE_ONEPAGE) {
+                $this->_redirect(
+                    'checkout/onepage',
+                    array(
+                        'lpa' => true,
+                        'orderReferenceId' => $this->_getOrderReferenceId(),
+                        'accessToken' => $this->_getAccessToken()
+                    )
+                );
+                return;
+            }
+
             $this->loadLayout();
             $this->getLayout()->getBlock('head')->setTitle($this->__('Amazon Pay'));
             $this->renderLayout();
@@ -248,24 +131,48 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
                     return;
                 }
 
-                // submit draft data of order reference to Amazon gateway
-                $orderReferenceDetails = $this->_getApi()->setOrderReferenceDetails(
-                    $this->_getQuote()->getBaseGrandTotal(),
-                    $this->_getQuote()->getBaseCurrencyCode(),
-                    $this->_getOrderReferenceId()
+                $result = $this->_saveShipping($this->_getAmazonCheckout());
+            } catch (Exception $e) {
+                Creativestyle_AmazonPayments_Model_Logger::logException($e);
+                $result = array(
+                    'error' => -1,
+                    'error_messages' => $e->getMessage(),
+                    'allow_submit' => false
                 );
+            }
 
-                /** @var Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor */
-                $transactionProcessor = Mage::getModel('amazonpayments/processor_transaction');
-                $transactionProcessor->setTransactionDetails($orderReferenceDetails);
-                $shippingAddress = $transactionProcessor->getMagentoShippingAddress();
-                $result = $this->_getCheckout()->saveShipping(
-                    array_merge(
-                        $shippingAddress,
-                        array('use_for_shipping' => true)
+            if (!isset($result['error'])) {
+                $result = array(
+                    'render_widget' => array(
+                        'shipping-method' => $this->_getLayoutHandleHtml('amazonpayments_checkout_shippingmethod')
                     ),
-                    false
+                    'allow_submit' => false,
+                    'goto_section' => 'shipping_method',
+                    'update_sections' => array(
+                        array(
+                            'name' => 'shipping-method',
+                            'html' => $this->_getLayoutHandleHtml('checkout_onepage_shippingmethod')
+                        ),
+                    )
                 );
+            };
+        } else {
+            $this->_forward('noRoute');
+            return;
+        }
+
+        $this->getResponse()->setBody(Mage::helper('core')->jsonEncode($result));
+    }
+
+    public function opcSaveShippingAction()
+    {
+        if ($this->getRequest()->isPost()) {
+            try {
+                if ($this->_expireAjax()) {
+                    return;
+                }
+
+                $result = $this->_saveShipping($this->_getOnePageCheckout());
             } catch (Exception $e) {
                 Creativestyle_AmazonPayments_Model_Logger::logException($e);
                 $result = array(
@@ -291,6 +198,9 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
         $this->getResponse()->setBody(Mage::helper('core')->jsonEncode($result));
     }
 
+    /**
+     * @throws Mage_Core_Exception
+     */
     public function saveShippingMethodAction()
     {
         if ($this->getRequest()->isPost()) {
@@ -328,16 +238,14 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
     }
 
     /**
-     * @param OffAmazonPaymentsService_Model_OrderReferenceDetails $orderReference
+     * @param array $orderReference
      * @return array|null
      */
     protected function _validateOrderReference($orderReference)
     {
-        /** @var OffAmazonPaymentsService_Model_Constraints $constraints */
-        if ($constraints = $orderReference->getConstraints()) {
-            /** @var OffAmazonPaymentsService_Model_Constraint $constraint */
-            foreach ($constraints->getConstraint() as $constraint) {
-                switch ($constraint->getConstraintID()) {
+        if (isset($orderReference['Constraints']) && is_array($orderReference['Constraints'])) {
+            foreach ($orderReference['Constraints'] as $constraint) {
+                switch ($constraint['ConstraintID']) {
                     case 'ShippingAddressNotSet':
                         return array(
                             'success' => false,
@@ -397,6 +305,7 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
     /**
      * @param Creativestyle_AmazonPayments_Exception_InvalidTransaction $e
      * @return array|null
+     * @throws Varien_Exception
      */
     protected function _handleInvalidTransactionException(Creativestyle_AmazonPayments_Exception_InvalidTransaction $e)
     {
@@ -460,6 +369,9 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
         );
     }
 
+    /**
+     * @throws Varien_Exception
+     */
     public function saveOrderAction()
     {
         try {
@@ -475,6 +387,7 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
 
             // validate order reference
             $orderReferenceDetails = $this->_getApi()->getOrderReferenceDetails(
+                null,
                 $this->_getOrderReferenceId(),
                 $this->_getAccessToken()
             );
@@ -484,8 +397,14 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
                 return;
             }
 
-            $skipOrderReferenceProcessing = $orderReferenceDetails->getOrderReferenceStatus()->getState()
-                != Creativestyle_AmazonPayments_Model_Processor_Transaction::TRANSACTION_STATE_DRAFT;
+            $skipOrderReferenceProcessing = false;
+            if (isset($orderReferenceDetails['OrderReferenceStatus'])) {
+                $orderReferenceStatus = $orderReferenceDetails['OrderReferenceStatus'];
+                if (isset($orderReferenceStatus['State'])) {
+                    $skipOrderReferenceProcessing = $orderReferenceStatus['State']
+                        != Creativestyle_AmazonPayments_Model_Processor_Transaction::TRANSACTION_STATE_DRAFT;
+                }
+            }
 
             $sequenceNumber = (int)$this->_getCheckoutSession()->getAmazonSequenceNumber();
             $this->_getQuote()->getPayment()
@@ -494,7 +413,10 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
                 ->setAmazonSequenceNumber($sequenceNumber ? $sequenceNumber : null);
             $this->_getCheckoutSession()->setAmazonSequenceNumber($sequenceNumber ? $sequenceNumber + 1 : 1);
 
-
+            $customFields = $this->getRequest()->getPost('custom_fields', array());
+            foreach ($customFields as $customFieldName => $customFieldValue) {
+                $this->_getQuote()->setData($customFieldName, $customFieldValue);
+            }
 
             $simulation = $this->getRequest()->getPost('simulation', array());
             if (!empty($simulation) && isset($simulation['object'])) {
@@ -513,6 +435,13 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
 
             $this->_getCheckout()->saveOrder();
             $this->_getQuote()->save();
+
+            $this->_getApi()->setOrderAttributes(
+                null,
+                $this->_getOrderReferenceId(),
+                $this->_getCheckoutSession()->getLastRealOrderId()
+            );
+
             $result = array(
                 'success' => true,
                 'error' => false,
@@ -540,18 +469,27 @@ class Creativestyle_AmazonPayments_CheckoutController extends Mage_Core_Controll
         }
     }
 
+    /**
+     * @throws Varien_Exception
+     */
     public function clearOrderReferenceAction()
     {
         $this->_clearOrderReferenceId();
         $this->_redirect('checkout/cart');
     }
 
+    /**
+     * @throws Varien_Exception
+     */
     public function cancelOrderReferenceAction()
     {
         $this->_cancelOrderReferenceId();
         $this->_redirect('checkout/cart');
     }
 
+    /**
+     * @throws Mage_Core_Exception
+     */
     public function couponPostAction()
     {
         if ($this->getRequest()->isPost()) {

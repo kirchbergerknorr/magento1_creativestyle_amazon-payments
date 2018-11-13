@@ -93,7 +93,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction_DataMapper
                     => 'is_transaction_pending'
             ),
             Creativestyle_AmazonPayments_Model_Processor_Transaction::TRANSACTION_STATE_COMPLETED
-                => 'is_transaction_accepted'
+                => 'is_transaction_approved'
         )
     );
 
@@ -141,6 +141,17 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction_DataMapper
             Creativestyle_AmazonPayments_Model_Processor_Transaction::TRANSACTION_STATE_COMPLETED => true
         )
     );
+
+    /**
+     * Converts CamelCase string to snake_case string
+     *
+     * @param string $input
+     * @return string
+     */
+    protected function _underscore($input)
+    {
+        return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $input));
+    }
 
     /**
      * @param array $map
@@ -238,6 +249,43 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction_DataMapper
     }
 
     /**
+     * @param string $state
+     * @param Varien_Object|null $customStatus
+     * @param string|null $transactionType
+     * @param string|null $transactionState
+     * @param string|null $transactionReasonCode
+     * @return string
+     */
+    protected function _getStatusByStateAndTransaction(
+        $state,
+        $customStatus = null,
+        $transactionType = null,
+        $transactionState = null,
+        $transactionReasonCode = null
+    ) {
+        $stateStatus = $this->_getStatusByState($state, $customStatus);
+        if ($customStatus) {
+            $transactionData = array();
+            if ($transactionReasonCode) {
+                $transactionData[] = $this->_underscore($transactionReasonCode);
+            }
+
+            if ($transactionState) {
+                $transactionData[] = $this->_underscore($transactionState);
+            }
+
+            if ($transactionType) {
+                $transactionData[] = $this->_underscore($transactionType);
+            }
+
+            $orderStatusCode = join('_', $transactionData) . '_order_status';
+            return $customStatus->getData($orderStatusCode) ? $customStatus->getData($orderStatusCode) : $stateStatus;
+        }
+
+        return $stateStatus;
+    }
+
+    /**
      * @param $message
      * @param Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor
      * @return string
@@ -330,7 +378,13 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction_DataMapper
         if ($orderState) {
             $stateObjectData = array(
                 'state' => $orderState,
-                'status' => $this->_getStatusByState($orderState, $customStatus),
+                'status' => $this->_getStatusByStateAndTransaction(
+                    $orderState,
+                    $customStatus,
+                    $transactionProcessor->getTransactionType(),
+                    $transactionProcessor->getTransactionState(),
+                    $transactionProcessor->getTransactionReasonCode()
+                )
             );
             if ($orderState == Mage_Sales_Model_Order::STATE_HOLDED) {
                 $stateObjectData['hold_before_state'] = $stateObject->getState();

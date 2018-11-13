@@ -3,14 +3,14 @@
  * This file is part of the official Amazon Pay and Login with Amazon extension
  * for Magento 1.x
  *
- * (c) 2014 - 2017 creativestyle GmbH. All Rights reserved
+ * (c) 2014 - 2018 creativestyle GmbH. All Rights reserved
  *
  * Distribution of the derivatives reusing, transforming or being built upon
  * this software, is not allowed without explicit written permission granted
  * by creativestyle GmbH
  *
  * @package    Creativestyle\AmazonPayments\Model\Payment
- * @copyright  2014 - 2017 creativestyle GmbH
+ * @copyright  2014 - 2018 creativestyle GmbH
  * @author     Marek Zabrowarny <ticket@creativestyle.de>
  */
 abstract class Creativestyle_AmazonPayments_Model_Payment_Abstract extends Mage_Payment_Model_Method_Abstract
@@ -49,7 +49,7 @@ abstract class Creativestyle_AmazonPayments_Model_Payment_Abstract extends Mage_
     protected $_canRefundInvoicePartial     = true;
     protected $_canVoid                     = true;
     protected $_canUseInternal              = false;
-    protected $_canUseCheckout              = false;
+    protected $_canUseCheckout              = true;
     protected $_canUseForMultishipping      = false;
     protected $_isInitializeNeeded          = true;
     protected $_canFetchTransactionInfo     = true;
@@ -117,7 +117,15 @@ abstract class Creativestyle_AmazonPayments_Model_Payment_Abstract extends Mage_
             array(
                 'new_order_status' => $this->_getConfig()->getNewOrderStatus($store),
                 'holded_order_status' => $this->_getConfig()->getHoldedOrderStatus($store),
-                'authorized_order_status' => $this->_getConfig()->getAuthorizedOrderStatus($store)
+                'authorized_order_status' => $this->_getConfig()->getAuthorizedOrderStatus($store),
+                'invalid_payment_method_declined_authorization_order_status'
+                    => $this->_getConfig()->getInvalidPaymentMethodOrderStatus($store),
+                'transaction_timed_out_declined_authorization_order_status'
+                    => $this->_getConfig()->getTransactionTimedOutOrderStatus($store),
+                'amazon_rejected_declined_authorization_order_status'
+                    => $this->_getConfig()->getAmazonRejectedOrderStatus($store),
+                'processing_failure_declined_authorization_order_status'
+                    => $this->_getConfig()->getProcessingFailureOrderStatus($store)
             )
         );
     }
@@ -200,7 +208,6 @@ abstract class Creativestyle_AmazonPayments_Model_Payment_Abstract extends Mage_
                 $amount,
                 $payment->getOrder()->getBaseCurrencyCode(),
                 $payment->getTransactionId(),
-                $payment->getOrder()->getIncrementId(),
                 $this->_getConfig()->getStoreName($payment->getOrder()->getStoreId())
             );
         }
@@ -278,7 +285,7 @@ abstract class Creativestyle_AmazonPayments_Model_Payment_Abstract extends Mage_
 
         /** @var Mage_Sales_Model_Order_Payment_Transaction $transaction */
         $transaction = $payment->setIsTransactionClosed(false)
-            ->setTransactionId($transactionDetails->getAmazonAuthorizationId())
+            ->setTransactionId($transactionDetails['AmazonAuthorizationId'])
             ->setParentTransactionId($parentTransactionId)
             ->addTransaction(Mage_Sales_Model_Order_Payment_Transaction::TYPE_AUTH);
         $transactionInfo = $this->_fetchTransactionInfo($payment, $transaction, $stateObject);
@@ -361,7 +368,7 @@ abstract class Creativestyle_AmazonPayments_Model_Payment_Abstract extends Mage_
         );
         /** @var Mage_Sales_Model_Order_Payment_Transaction $transaction */
         $transaction = $payment->setIsTransactionClosed(false)
-            ->setTransactionId($transactionDetails->getAmazonCaptureId())
+            ->setTransactionId($transactionDetails['AmazonCaptureId'])
             ->setParentTransactionId($parentTransactionId)
             ->addTransaction(Mage_Sales_Model_Order_Payment_Transaction::TYPE_CAPTURE);
         $transactionInfo = $this->_fetchTransactionInfo($payment, $transaction, $stateObject, $transactionDetails);
@@ -421,7 +428,7 @@ abstract class Creativestyle_AmazonPayments_Model_Payment_Abstract extends Mage_
         );
         /** @var Mage_Sales_Model_Order_Payment_Transaction $transaction */
         $transaction = $payment->setIsTransactionClosed(false)
-            ->setTransactionId($transactionDetails->getAmazonRefundId())
+            ->setTransactionId($transactionDetails['AmazonRefundId'])
             ->setParentTransactionId($parentTransactionId)
             ->addTransaction(Mage_Sales_Model_Order_Payment_Transaction::TYPE_REFUND);
         $transactionInfo = $this->_fetchTransactionInfo($payment, $transaction, $stateObject, $transactionDetails);
@@ -488,6 +495,9 @@ abstract class Creativestyle_AmazonPayments_Model_Payment_Abstract extends Mage_
     {
         $checkResult = new StdClass;
         $isActive = $this->_getConfig()->isPayActive($quote ? $quote->getStoreId() : null);
+
+        $checkResult->isDeniedInConfig = !$isActive;
+
         if ($quote && !$quote->validateMinimumAmount()) {
             $isActive = false;
         }
@@ -497,7 +507,7 @@ abstract class Creativestyle_AmazonPayments_Model_Payment_Abstract extends Mage_
         }
 
         $checkResult->isAvailable = $isActive;
-        $checkResult->isDeniedInConfig = !$isActive;
+
         Mage::dispatchEvent(
             'payment_method_is_active',
             array(
@@ -586,8 +596,8 @@ abstract class Creativestyle_AmazonPayments_Model_Payment_Abstract extends Mage_
                 new Varien_Object(),
                 $this->_getTransactionSequenceId($payment),
                 $parentTransaction->getTxnId(),
-                $this->_getConfig()->captureImmediately($payment->getOrder()->getStoreId()),
                 $this->_getConfig()->isAuthorizationSynchronous($payment->getOrder()->getStoreId()),
+                $this->_getConfig()->captureImmediately($payment->getOrder()->getStoreId()),
                 $this->_getConfig()->getSoftDescriptor($payment->getOrder()->getStoreId())
             );
         }
@@ -715,4 +725,17 @@ abstract class Creativestyle_AmazonPayments_Model_Payment_Abstract extends Mage_
         $this->_getPaymentProcessor($payment)->closeOrderReference($payment->getOrder()->getExtOrderId());
         return $this;
     }
+
+    /**
+     * Can be used in regular checkout
+     *
+     * @return bool
+     */
+    public function canUseCheckout()
+    {
+        return $this->_getConfig()->getCheckoutType()
+            === Creativestyle_AmazonPayments_Model_Lookup_CheckoutType::CHECKOUT_TYPE_ONEPAGE
+            && Mage::helper('amazonpayments')->isOnePageCheckout();
+    }
 }
+

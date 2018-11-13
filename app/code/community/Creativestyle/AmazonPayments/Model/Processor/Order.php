@@ -3,7 +3,7 @@
  * This file is part of the official Amazon Pay and Login with Amazon extension
  * for Magento 1.x
  *
- * (c) 2015 - 2017 creativestyle GmbH. All Rights reserved
+ * (c) 2015 - 2018 creativestyle GmbH. All Rights reserved
  *
  * Distribution of the derivatives reusing, transforming or being built upon
  * this software, is not allowed without explicit written permission granted
@@ -49,6 +49,17 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
     }
 
     /**
+     * Return Magento payment processor instance
+     *
+     * @param Mage_Sales_Model_Order_Payment $payment
+     * @return Creativestyle_AmazonPayments_Model_Processor_Payment
+     */
+    protected function _getPaymentProcessor(Mage_Sales_Model_Order_Payment $payment)
+    {
+        return Mage::getModel('amazonpayments/processor_payment')->setPayment($payment);
+    }
+
+    /**
      * Returns transaction processor instance
      *
      * @param Mage_Sales_Model_Order_Payment_Transaction $transaction
@@ -61,6 +72,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
 
     /**
      * @return Mage_Sales_Model_Order_Invoice|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _getInvoice()
     {
@@ -76,6 +88,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
     /**
      * @param string $transactionId
      * @return Mage_Sales_Model_Order_Creditmemo|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _getCreditmemoByTransactionId($transactionId)
     {
@@ -95,6 +108,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
      *
      * @param Varien_Object $stateObject
      * @return $this
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _initStateObject(Varien_Object $stateObject)
     {
@@ -120,37 +134,39 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
      */
     protected function _updateAddress($address, $newAddress)
     {
-        if ($address->getFirstname() != $newAddress->getFirstname()) {
-            $address->setFirstname($newAddress->getFirstname());
-        }
+        if ($address) {
+            if ($address->getFirstname() != $newAddress->getFirstname()) {
+                $address->setFirstname($newAddress->getFirstname());
+            }
 
-        if ($address->getLastname() != $newAddress->getLastname()) {
-            $address->setLastname($newAddress->getLastname());
-        }
+            if ($address->getLastname() != $newAddress->getLastname()) {
+                $address->setLastname($newAddress->getLastname());
+            }
 
-        if ($address->getCompany() != $newAddress->getCompany()) {
-            $address->setCompany($newAddress->getCompany());
-        }
+            if ($address->getCompany() != $newAddress->getCompany()) {
+                $address->setCompany($newAddress->getCompany());
+            }
 
-        if ($address->getCity() != $newAddress->getCity()) {
-            $address->setCity($newAddress->getCity());
-        }
+            if ($address->getCity() != $newAddress->getCity()) {
+                $address->setCity($newAddress->getCity());
+            }
 
-        if ($address->getPostcode() != $newAddress->getPostcode()) {
-            $address->setPostcode($newAddress->getPostcode());
-        }
+            if ($address->getPostcode() != $newAddress->getPostcode()) {
+                $address->setPostcode($newAddress->getPostcode());
+            }
 
-        if ($address->getCountryId() != $newAddress->getCountryId()) {
-            $address->setCountryId($newAddress->getCountryId());
-        }
+            if ($address->getCountryId() != $newAddress->getCountryId()) {
+                $address->setCountryId($newAddress->getCountryId());
+            }
 
-        if ($address->getTelephone() != $newAddress->getTelephone()) {
-            $address->setTelephone($newAddress->getTelephone());
-        }
+            if ($address->getTelephone() != $newAddress->getTelephone()) {
+                $address->setTelephone($newAddress->getTelephone());
+            }
 
-        $streetDiff = array_diff($address->getStreet(), $newAddress->getStreet());
-        if (!empty($streetDiff)) {
-            $address->setStreet($newAddress->getStreet());
+            $streetDiff = array_diff($address->getStreet(), $newAddress->getStreet());
+            if (!empty($streetDiff)) {
+                $address->setStreet($newAddress->getStreet());
+            }
         }
     }
 
@@ -158,6 +174,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
      * @param string $email
      * @param string $firstname
      * @param string $lastname
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _updateCustomerData($email, $firstname, $lastname)
     {
@@ -176,6 +193,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
 
     /**
      * @param array $address
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _updateBillingAddress(array $address)
     {
@@ -184,6 +202,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
 
     /**
      * @param array $address
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _updateShippingAddress(array $address)
     {
@@ -193,6 +212,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
     /**
      * @param Varien_Object $stateObject
      * @return bool
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _shouldUpdateOrderState(Varien_Object $stateObject)
     {
@@ -207,6 +227,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
     /**
      * @param Varien_Object $stateObject
      * @return $this
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _updateOrderState(Varien_Object $stateObject)
     {
@@ -233,6 +254,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
     /**
      * @param mixed|null $flags
      * @return $this
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _updatePaymentFlags($flags = null)
     {
@@ -252,6 +274,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
     /**
      * @param Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor
      * @return $this
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _updateTransactionDocuments(
         Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor
@@ -269,12 +292,12 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
     /**
      * @param Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor
      * @return $this
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _updateInvoice(
         Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor
     ) {
-        $invoice = $this->_getInvoice();
-        if ($invoice) {
+        if ($this->_getInvoice()) {
             $this->getPayment()
                 ->setSkipTransactionCreation(true)
                 ->registerPaymentReviewAction(Mage_Sales_Model_Order_Payment::REVIEW_ACTION_UPDATE, false);
@@ -290,6 +313,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
     /**
      * @param Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor
      * @return $this
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _updateCreditmemo(
         Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor
@@ -308,6 +332,8 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
      * @param Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor
      * @param Varien_Object $stateObject
      * @return $this
+     * @throws Creativestyle_AmazonPayments_Exception
+     * @throws Mage_Core_Exception
      */
     protected function _processChildTransactions(
         Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor,
@@ -335,6 +361,8 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
      * @param Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor
      * @param Varien_Object $stateObject
      * @return $this
+     * @throws Creativestyle_AmazonPayments_Exception
+     * @throws Mage_Core_Exception
      */
     protected function _processParentTransactions(
         Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor,
@@ -359,8 +387,17 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
             if ($authTransaction && $authTransaction->getIsClosed() && ($this->getOrder()->getBaseTotalDue() > 0)) {
                 $this->getPaymentMethodInstance()
                     ->setStore($this->getStoreId())
-                    ->authorize($this->getPayment(), $this->getBaseTotalDue());
+                    ->authorize($this->getPayment(), $this->getOrder()->getBaseTotalDue());
             }
+        }
+
+        if ($transactionProcessor->getTransactionType()
+            == Creativestyle_AmazonPayments_Model_Processor_Transaction::TRANSACTION_TYPE_AUTH
+            && $transactionProcessor->getTransactionState()
+            == Creativestyle_AmazonPayments_Model_Processor_Transaction::TRANSACTION_STATE_DECLINED
+            && $transactionProcessor->getTransactionReasonCode()
+            == Creativestyle_AmazonPayments_Model_Processor_Transaction::TRANSACTION_REASON_TIMEOUT) {
+            $this->_getPaymentProcessor($this->getPayment())->cancelOrderReference();
         }
 
         return $this;
@@ -370,6 +407,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
      * @param Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor
      * @param Varien_Object $stateObject
      * @return $this
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _sendTransactionalEmails($transactionProcessor, $stateObject)
     {
@@ -416,6 +454,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
 
     /**
      * @return Mage_Sales_Model_Order_Payment
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getPayment()
     {
@@ -424,23 +463,34 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
 
     /**
      * @return Creativestyle_AmazonPayments_Model_Payment_Abstract
+     * @throws Creativestyle_AmazonPayments_Exception
+     * @throws Mage_Core_Exception
      */
     public function getPaymentMethodInstance()
     {
-        return $this->getOrder()->getPayment()->getMethodInstance();
+        return $this->getPayment()->getMethodInstance();
     }
 
     /**
      * Returns order's store ID
      *
      * @return int
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getStoreId()
     {
         return $this->getOrder()->getStoreId();
     }
 
-
+    /**
+     * @param string $transactionType
+     * @param string $transactionId
+     * @param string $parentTransactionId
+     * @param Varien_Object $stateObject
+     * @return $this
+     * @throws Creativestyle_AmazonPayments_Exception
+     * @throws Mage_Core_Exception
+     */
     public function addTransaction(
         $transactionType,
         $transactionId,
@@ -463,6 +513,8 @@ class Creativestyle_AmazonPayments_Model_Processor_Order
      * @param Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor
      * @param Varien_Object $stateObject
      * @param Varien_Object $customStatus
+     * @throws Creativestyle_AmazonPayments_Exception
+     * @throws Mage_Core_Exception
      */
     public function importTransactionDetails(
         Creativestyle_AmazonPayments_Model_Processor_Transaction $transactionProcessor,

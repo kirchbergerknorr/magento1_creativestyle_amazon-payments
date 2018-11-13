@@ -4,7 +4,7 @@
  * This file is part of the official Amazon Pay and Login with Amazon extension
  * for Magento 1.x
  *
- * (c) 2014 - 2017 creativestyle GmbH. All Rights reserved
+ * (c) 2014 - 2018 creativestyle GmbH. All Rights reserved
  *
  * Distribution of the derivatives reusing, transforming or being built upon
  * this software, is not allowed without explicit written permission granted
@@ -19,7 +19,7 @@
 <config>
     <modules>
         <Creativestyle_AmazonPayments>
-            <version>2.0.8</version>
+            <version>2.0.22</version>
         </Creativestyle_AmazonPayments>
     </modules>
     <global>
@@ -124,8 +124,12 @@
         <creativestyle>
             <amazonpayments>
                 <account_regions>
-                    <EUR>Eurozone</EUR>
+                    <EUR_DE>Germany</EUR_DE>
+                    <EUR_FR>France</EUR_FR>
+                    <EUR_IT>Italy</EUR_IT>
+                    <EUR_ES>Spain</EUR_ES>
                     <GBP>United Kingdom</GBP>
+                    <EUR>Eurozone</EUR>
                 </account_regions>
                 <regions>
                     <de>Germany</de>
@@ -140,6 +144,10 @@
                         <sandbox>https://payments-sandbox.amazon.co.uk/gp/widgets/button</sandbox>
                         <live>https://payments.amazon.co.uk/gp/widgets/button</live>
                     </uk>
+                    <us>
+                        <sandbox>https://payments-sandbox.amazon.com/gp/widgets/button</sandbox>
+                        <live>https://payments.amazon.com/gp/widgets/button</live>
+                    </us>
                 </button_urls>
                 <login_api_urls>
                     <de>
@@ -150,6 +158,10 @@
                         <sandbox>https://api.sandbox.amazon.co.uk/</sandbox>
                         <live>https://api.amazon.co.uk/</live>
                     </uk>
+                    <us>
+                        <sandbox>https://api.sandbox.amazon.com/</sandbox>
+                        <live>https://api.amazon.com/</live>
+                    </us>
                 </login_api_urls>
                 <customer_attributes>
                     <prefix />
@@ -432,20 +444,21 @@
             </checkoutbyamazon_sandbox>
         </payment>
         <amazonpayments>
-            <account>
-                <region>EUR</region>
-            </account>
             <general>
-                <active>0</active>
-                <login_active>0</login_active>
-                <product_page_active>0</product_page_active>
-                <sandbox>1</sandbox>
+                <active>1</active>
+                <login_active>1</login_active>
+                <product_page_active>1</product_page_active>
+                <environment>live</environment>
                 <sandbox_toolbox>0</sandbox_toolbox>
                 <ipn_active>1</ipn_active>
                 <payment_action>authorize</payment_action>
                 <authorization_mode>auto</authorization_mode>
                 <new_order_status>pending</new_order_status>
                 <authorized_order_status>processing</authorized_order_status>
+                <invalid_payment_method_order_status>holded</invalid_payment_method_order_status>
+                <transaction_timed_out_order_status>holded</transaction_timed_out_order_status>
+                <amazon_rejected_order_status>holded</amazon_rejected_order_status>
+                <processing_failure_order_status>holded</processing_failure_order_status>
                 <language></language>
                 <authentication>auto</authentication>
             </general>

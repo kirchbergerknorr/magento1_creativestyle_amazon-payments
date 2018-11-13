@@ -16,12 +16,39 @@
  */
 class Creativestyle_AmazonPayments_Model_Lookup_AccountRegion extends Creativestyle_AmazonPayments_Model_Lookup_Abstract
 {
-    protected function _getRegions()
+    /**
+     * Returns Amazon Pay config model instance
+     *
+     * @return Creativestyle_AmazonPayments_Model_Config
+     */
+    protected function _getConfig()
     {
-        return Mage::getSingleton('amazonpayments/config')->getGlobalConfigData('account_regions');
+        return Mage::getSingleton('amazonpayments/config');
     }
 
-    public function toOptionArray() 
+    protected function _getRegions()
+    {
+        return $this->_getConfig()->getGlobalConfigData('account_regions');
+    }
+
+    /**
+     * @return bool
+     */
+    protected function _isExtendedConfigEnabled()
+    {
+        return $this->_getConfig()->isExtendedConfigEnabled();
+    }
+
+    /**
+     * @param $region
+     * @return bool|string
+     */
+    protected function _getRegionCurrencyCode($region)
+    {
+        return substr($region, 0, 3);
+    }
+
+    public function toOptionArray()
     {
         if (null === $this->_options) {
             $this->_options = array();
@@ -29,6 +56,15 @@ class Creativestyle_AmazonPayments_Model_Lookup_AccountRegion extends Creativest
                 $this->_options[] = array(
                     'value' => $region,
                     'label' => Mage::helper('amazonpayments')->__($regionName)
+                        . sprintf(' (%s)', $this->_getRegionCurrencyCode($region))
+                );
+            }
+
+            if ($this->_isExtendedConfigEnabled()) {
+                $this->_options[] = array(
+                    'value' => 'USD',
+                    'label' => Mage::helper('amazonpayments')->__('United States')
+                        . sprintf(' (%s)', $this->_getRegionCurrencyCode('USD'))
                 );
             }
         }
@@ -36,7 +72,7 @@ class Creativestyle_AmazonPayments_Model_Lookup_AccountRegion extends Creativest
         return $this->_options;
     }
 
-    public function getRegionLabelByCode($code) 
+    public function getRegionLabelByCode($code)
     {
         $regions = $this->getOptions();
         if (array_key_exists($code, $regions)) {

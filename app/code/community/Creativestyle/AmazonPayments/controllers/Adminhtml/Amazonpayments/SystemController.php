@@ -20,6 +20,10 @@ class Creativestyle_AmazonPayments_Adminhtml_Amazonpayments_SystemController ext
     {
         switch ($region) {
             case 'EUR':
+            case 'EUR_DE':
+            case 'EUR_FR':
+            case 'EUR_IT':
+            case 'EUR_ES':
                 return 'de';
             case 'GBP':
                 return 'uk';

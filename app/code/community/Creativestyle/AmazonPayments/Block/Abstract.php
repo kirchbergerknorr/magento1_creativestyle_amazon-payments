@@ -340,4 +340,12 @@ abstract class Creativestyle_AmazonPayments_Block_Abstract extends Mage_Core_Blo
     {
         return $this->_containerClass;
     }
+
+    /**
+     * @return float
+     */
+    public function getQuoteBaseGrandTotal()
+    {
+        return (float)$this->_getQuote()->getBaseGrandTotal();
+    }
 }

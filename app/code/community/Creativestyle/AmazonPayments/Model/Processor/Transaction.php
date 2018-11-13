@@ -3,14 +3,14 @@
  * This file is part of the official Amazon Pay and Login with Amazon extension
  * for Magento 1.x
  *
- * (c) 2017 creativestyle GmbH. All Rights reserved
+ * (c) 2017 - 2018 creativestyle GmbH. All Rights reserved
  *
  * Distribution of the derivatives reusing, transforming or being built upon
  * this software, is not allowed without explicit written permission granted
  * by creativestyle GmbH
  *
  * @package    Creativestyle\AmazonPayments\Model\Processor
- * @copyright  2017 creativestyle GmbH
+ * @copyright  2017 - 2018 creativestyle GmbH
  * @author     Marek Zabrowarny <ticket@creativestyle.de>
  */
 class Creativestyle_AmazonPayments_Model_Processor_Transaction
@@ -51,18 +51,20 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
     protected $_transaction = null;
 
     /**
-     * @var OffAmazonPaymentsService_Model|OffAmazonPayments_Model|null
+     * @var array|null
      */
     protected $_transactionDetails = null;
 
     /**
      * Returns Amazon Pay API adapter instance
      *
-     * @return Creativestyle_AmazonPayments_Model_Api_Advanced
+     * @return Creativestyle_AmazonPayments_Model_Api_Pay
      */
     protected function _getApi()
     {
-        return Mage::getSingleton('amazonpayments/api_advanced')->setStore($this->_getStoreId());
+        /** @var Creativestyle_AmazonPayments_Model_Api_Pay $api */
+        $api = Mage::getSingleton('amazonpayments/api_pay');
+        return $api;
     }
 
     /**
@@ -72,12 +74,15 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      */
     protected function _getHelper()
     {
-        return Mage::helper('amazonpayments');
+        /** @var Creativestyle_AmazonPayments_Helper_Data $helper */
+        $helper = Mage::helper('amazonpayments');
+        return $helper;
     }
 
     /**
      * @param string $amount
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _formatAmount($amount = null)
     {
@@ -88,6 +93,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns order's store ID
      *
      * @return int
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _getStoreId()
     {
@@ -98,6 +104,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns Magento transaction type
      *
      * @return string
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _getMagentoTransactionType()
     {
@@ -106,6 +113,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return int
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _getTransactionAgeInDays()
     {
@@ -121,6 +129,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      *
      * @param string|null $key
      * @return array|null|string
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _getMagentoTransactionAdditionalInformation($key = null)
     {
@@ -143,7 +152,8 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns details for the transaction, if not set then retrieves
      * the details from Amazon Payments API.
      *
-     * @return OffAmazonPayments_Model|OffAmazonPaymentsService_Model|null
+     * @return array|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _getAmazonTransactionDetails()
     {
@@ -155,80 +165,15 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
     }
 
     /**
-     * @return OffAmazonPaymentsService_Model_Status|null
+     * @return array|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _getAmazonTransactionStatus()
     {
-        // @codingStandardsIgnoreStart
-        return call_user_func(
-            array(
-                $this->_getAmazonTransactionDetails(),
-            'isSet' . $this->getTransactionType() . 'Status')
-        )
-            ? call_user_func(
-                array(
-                $this->_getAmazonTransactionDetails(),
-                'get' . $this->getTransactionType() . 'Status')
-            )
-            : null;
-        // @codingStandardsIgnoreEnd
-    }
-
-    /**
-     * @return OffAmazonPaymentsService_Model_Buyer|null
-     */
-    protected function _getAmazonBuyer()
-    {
-        return is_callable(array($this->_getAmazonTransactionDetails(), 'isSetBuyer'))
-            && $this->_getAmazonTransactionDetails()->isSetBuyer()
-                ? $this->_getAmazonTransactionDetails()->getBuyer()
-                : null;
-    }
-
-    /**
-     * @return OffAmazonPaymentsService_Model_Address|null
-     */
-    protected function _getAmazonBillingAddress()
-    {
         $transactionDetails = $this->_getAmazonTransactionDetails();
-        if (is_callable(array($transactionDetails, 'isSetBillingAddress'))) {
-            /** @var OffAmazonPaymentsService_Model_OrderReferenceDetails $transactionDetails */
-            if ($transactionDetails->isSetBillingAddress()) {
-                /** @var OffAmazonPaymentsService_Model_BillingAddress $billingAddress */
-                $billingAddress = $transactionDetails->getBillingAddress();
-                if (is_callable(array($billingAddress, 'isSetPhysicalAddress'))) {
-                    if ($billingAddress->isSetPhysicalAddress()) {
-                        return $billingAddress->getPhysicalAddress();
-                    }
-                }
-            }
-        } elseif (is_callable(array($transactionDetails, 'isSetAuthorizationBillingAddress'))) {
-            /** @var OffAmazonPaymentsService_Model_AuthorizationDetails $transactionDetails */
-            if ($transactionDetails->isSetAuthorizationBillingAddress()) {
-                return $transactionDetails->getAuthorizationBillingAddress();
-            }
-        }
 
-        return null;
-    }
-
-    /**
-     * @return OffAmazonPaymentsService_Model_Address|null
-     */
-    protected function _getAmazonShippingAddress()
-    {
-        $transactionDetails = $this->_getAmazonTransactionDetails();
-        if (is_callable(array($transactionDetails, 'isSetDestination'))) {
-            /** @var OffAmazonPaymentsService_Model_OrderReferenceDetails $transactionDetails */
-            if ($transactionDetails->isSetDestination()) {
-                /** @var OffAmazonPaymentsService_Model_Destination $destination */
-                $destination = $transactionDetails->getDestination();
-                if (is_callable(array($destination, 'isSetPhysicalDestination'))) {
-                    if ($destination->isSetPhysicalDestination()) {
-                        return $destination->getPhysicalDestination();
-                    }
-                }
-            }
+        if (isset($transactionDetails[$this->getTransactionType() . 'Status'])) {
+            return $transactionDetails[$this->getTransactionType() . 'Status'];
         }
 
         return null;
@@ -236,23 +181,63 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return array|null
+     * @throws Creativestyle_AmazonPayments_Exception
+     */
+    protected function _getAmazonBuyer()
+    {
+        $transactionDetails = $this->_getAmazonTransactionDetails();
+        return isset($transactionDetails['Buyer']) ? $transactionDetails['Buyer'] : null;
+    }
+
+    /**
+     * @return array|null
+     * @throws Creativestyle_AmazonPayments_Exception
+     */
+    protected function _getAmazonBillingAddress()
+    {
+        $transactionDetails = $this->_getAmazonTransactionDetails();
+        if (isset($transactionDetails['BillingAddress'])) {
+            $billingAddress = $transactionDetails['BillingAddress'];
+            if (isset($billingAddress['PhysicalAddress'])) {
+                return $billingAddress['PhysicalAddress'];
+            }
+        } elseif (isset($transactionDetails['AuthorizationBillingAddress'])) {
+            return $transactionDetails['AuthorizationBillingAddress'];
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array|null
+     * @throws Creativestyle_AmazonPayments_Exception
+     */
+    protected function _getAmazonShippingAddress()
+    {
+        $transactionDetails = $this->_getAmazonTransactionDetails();
+        if (isset($transactionDetails['Destination'])) {
+            $destination = $transactionDetails['Destination'];
+            if (isset($destination['PhysicalDestination'])) {
+                return $destination['PhysicalDestination'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return string|array|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _getAmazonIdList()
     {
         $transactionDetails = $this->_getAmazonTransactionDetails();
-        if (is_callable(array($transactionDetails, 'isSetIdList'))) {
-            if ($transactionDetails->isSetIdList()) {
-                /** @var OffAmazonPaymentsService_Model_IdList $idList */
-                $idList = $transactionDetails->getIdList();
-                if (is_callable(array($idList, 'isSetmember'))) {
-                    if ($idList->isSetmember()) {
-                        return $idList->getmember();
-                    }
-                } elseif (is_callable(array($idList, 'isSetId'))) {
-                    if ($idList->isSetId()) {
-                        return $idList->getId();
-                    }
-                }
+        if (isset($transactionDetails['IdList'])) {
+            $idList = $transactionDetails['IdList'];
+            if (isset($idList['member'])) {
+                return is_array($idList['member']) ? $idList['member'] : array($idList['member']);
+            } elseif (isset($idList['Id'])) {
+                return is_array($idList['Id']) ? $idList['Id'] : array($idList['Id']);
             }
         }
 
@@ -262,52 +247,50 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
     /**
      * Extracts city name from given Amazon Pay address object
      *
-     * @param OffAmazonPaymentsService_Model_Address|null $address
+     * @param array|null $address
      * @return string|null
      */
     protected function _extractCityFromAmazonAddress($address = null)
     {
-        return $address && $address->isSetCity()
-            ? $address->getCity() : null;
+        return $address && isset($address['City']) ? $address['City'] : null;
     }
 
     /**
      * Extracts country code from given Amazon Pay address object
      *
-     * @param OffAmazonPaymentsService_Model_Address|null $address
+     * @param array|null $address
      * @return string|null
      */
     protected function _extractCountryCodeFromAmazonAddress($address = null)
     {
-        return $address && $address->isSetCountryCode()
-            ? $address->getCountryCode() : null;
+        return $address && isset($address['CountryCode']) ? $address['CountryCode'] : null;
     }
 
     /**
      * Extracts customer name from given Amazon Pay address object
      *
-     * @param OffAmazonPaymentsService_Model_Address|null $address
-     * @return Varien_Object
+     * @param array|null $address
+     * @return Varien_Object|null
      */
     protected function _extractCustomerNameFromAmazonAddress($address = null)
     {
-        return $address && $address->isSetName()
-            ? $this->_getHelper()->explodeCustomerName($address->getName(), null) : null;
+        return $address && isset($address['Name'])
+            ? $this->_getHelper()->explodeCustomerName($address['Name'], null) : null;
     }
 
     /**
      * Extracts address lines from given Amazon Pay address object
      *
-     * @param OffAmazonPaymentsService_Model_Address|null $address
+     * @param array|null $address
      * @return array|null
      */
     protected function _extractLinesFromAmazonAddress($address = null)
     {
         if ($address) {
             return array(
-                $address->isSetAddressLine1() ? $address->getAddressLine1() : null,
-                $address->isSetAddressLine2() ? $address->getAddressLine2() : null,
-                $address->isSetAddressLine3() ? $address->getAddressLine3() : null,
+                isset($address['AddressLine1']) && !empty($address['AddressLine1']) ? $address['AddressLine1'] : null,
+                isset($address['AddressLine2']) && !empty($address['AddressLine2']) ? $address['AddressLine2'] : null,
+                isset($address['AddressLine3']) && !empty($address['AddressLine3']) ? $address['AddressLine3'] : null
             );
         }
 
@@ -317,25 +300,23 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
     /**
      * Extracts phone from given Amazon Pay address object
      *
-     * @param OffAmazonPaymentsService_Model_Address|null $address
+     * @param array|null $address
      * @return string|null
      */
     protected function _extractPhoneFromAmazonAddress($address = null)
     {
-        return $address && $address->isSetPhone()
-            ? $address->getPhone() : null;
+        return $address && isset($address['Phone']) ? $address['Phone'] : null;
     }
 
     /**
      * Extracts postal code from given Amazon Pay address object
      *
-     * @param OffAmazonPaymentsService_Model_Address|null $address
+     * @param array|null $address
      * @return string|null
      */
     protected function _extractPostalCodeFromAmazonAddress($address = null)
     {
-        return $address && $address->isSetPostalCode()
-            ? $address->getPostalCode() : null;
+        return $address && isset($address['PostalCode']) ? $address['PostalCode'] : null;
     }
 
     /**
@@ -345,14 +326,15 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Amazon Payments API client. Before making a call, identifies the
      * type of provided transaction type by using appropriate function.
      *
-     * @return OffAmazonPayments_Model|null
+     * @return array|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     protected function _fetchTransactionDetails()
     {
         // @codingStandardsIgnoreStart
         return call_user_func(
             array($this->_getApi(), 'get' . $this->getTransactionType() . 'Details'),
-            $this->getTransactionId()
+            $this->_getStoreId(), $this->getTransactionId()
         );
         // @codingStandardsIgnoreEnd
     }
@@ -364,7 +346,9 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      */
     public function getDataMapper()
     {
-        return Mage::getSingleton('amazonpayments/processor_transaction_dataMapper');
+        /** @var Creativestyle_AmazonPayments_Model_Processor_Transaction_DataMapper $dataMapper */
+        $dataMapper = Mage::getSingleton('amazonpayments/processor_transaction_dataMapper');
+        return $dataMapper;
     }
 
     /**
@@ -397,7 +381,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
     /**
      * Sets previously fetched transaction details
      *
-     * @param OffAmazonPaymentsService_Model|OffAmazonPayments_Model $transactionDetails
+     * @param array $transactionDetails
      * @return $this
      */
     public function setTransactionDetails($transactionDetails)
@@ -410,6 +394,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns transaction ID
      *
      * @return string
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getTransactionId()
     {
@@ -425,6 +410,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * recognized nor has an Amazon Pay equivalent.
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getTransactionType()
     {
@@ -433,70 +419,45 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getTransactionState()
     {
         $transactionStatus = $this->_getAmazonTransactionStatus();
-        return $transactionStatus ? $transactionStatus->getState() : null;
+        return $transactionStatus && isset($transactionStatus['State']) ? $transactionStatus['State'] : null;
     }
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getTransactionReasonCode()
     {
         $transactionStatus = $this->_getAmazonTransactionStatus();
-        return $transactionStatus && $transactionStatus->isSetReasonCode()
-            ? $transactionStatus->getReasonCode() : null;
+        return $transactionStatus && isset($transactionStatus['ReasonCode']) ? $transactionStatus['ReasonCode'] : null;
     }
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getTransactionReasonDescription()
     {
         $transactionStatus = $this->_getAmazonTransactionStatus();
-        return $transactionStatus && $transactionStatus->isSetReasonDescription()
-            ? $transactionStatus->getReasonDescription() : null;
+        return $transactionStatus && isset($transactionStatus['ReasonDescription'])
+            ? $transactionStatus['ReasonDescription'] : null;
     }
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getTransactionOrderLanguage()
     {
         $transactionDetails = $this->_getAmazonTransactionDetails();
-        return $transactionDetails
-            && is_callable(array($transactionDetails, 'isSetOrderLanguage'))
-            && $transactionDetails->isSetOrderLanguage()
-                ? $transactionDetails->getOrderLanguage() : null;
-    }
 
-    /**
-     * Returns transaction amount
-     *
-     * @return string|null
-     */
-    public function getTransactionAmount()
-    {
-        $transactionDetails = $this->_getAmazonTransactionDetails();
-        if (is_callable(array($transactionDetails, 'get' . $this->getTransactionType() . 'Amount'))) {
-            // @codingStandardsIgnoreStart
-            /** @var OffAmazonPaymentsService_Model_Price $transactionAmount */
-            $transactionAmount = call_user_func(
-                array(
-                $transactionDetails,
-                'get' . $this->getTransactionType() . 'Amount'
-                )
-            );
-            // @codingStandardsIgnoreEnd
-            return $transactionAmount->getAmount();
-        }
-
-        if (is_callable(array($transactionDetails, 'getOrderTotal'))) {
-            /** @var OffAmazonPaymentsService_Model_OrderTotal $transactionAmount */
-            $transactionAmount = $transactionDetails->getOrderTotal();
-            return $transactionAmount->getAmount();
+        if (isset($transactionDetails['OrderLanguage'])) {
+            return $transactionDetails['OrderLanguage'];
         }
 
         return null;
@@ -506,6 +467,33 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns transaction amount
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
+     */
+    public function getTransactionAmount()
+    {
+        $transactionDetails = $this->_getAmazonTransactionDetails();
+        if (isset($transactionDetails[$this->getTransactionType() . 'Amount'])) {
+            $transactionAmount = $transactionDetails[$this->getTransactionType() . 'Amount'];
+            if (isset($transactionAmount['Amount'])) {
+                return $transactionAmount['Amount'];
+            }
+        }
+
+        if (isset($transactionDetails['OrderTotal'])) {
+            $transactionAmount = $transactionDetails['OrderTotal'];
+            if (isset($transactionAmount['Amount'])) {
+                return $transactionAmount['Amount'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns transaction amount
+     *
+     * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getFormattedTransactionAmount()
     {
@@ -513,7 +501,8 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
     }
 
     /**
-     * @return array|null
+     * @return string|array|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getChildrenIds()
     {
@@ -522,16 +511,17 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getCustomerEmail()
     {
         $buyer = $this->_getAmazonBuyer();
-        return $buyer && $buyer->isSetEmail()
-            ? $buyer->getEmail() : null;
+        return $buyer && isset($buyer['Email']) ? $buyer['Email'] : null;
     }
 
     /**
      * @return Varien_Object|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getCustomerName()
     {
@@ -540,54 +530,59 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
         }
 
         $buyer = $this->_getAmazonBuyer();
-        return $buyer && $buyer->isSetName()
-            ? $this->_getHelper()->explodeCustomerName($buyer->getName(), null) : null;
+        return $buyer && isset($buyer['Name'])
+            ? $this->_getHelper()->explodeCustomerName($buyer['Name'], null) : null;
     }
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getCustomerFirstname()
     {
         $customerName = $this->getCustomerName();
-        return $customerName  ? $customerName->getFirstname() : null;
+        return $customerName  ? $customerName->getData('firstname') : null;
     }
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getCustomerLastname()
     {
         $customerName = $this->getCustomerName();
-        return $customerName  ? $customerName->getLastname() : null;
+        return $customerName  ? $customerName->getData('lastname') : null;
     }
 
     /**
      * Returns customer first name for billing address
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getBillingAddressFirstname()
     {
         $customerName = $this->_extractCustomerNameFromAmazonAddress($this->_getAmazonBillingAddress());
-        return $customerName ? $customerName->getFirstname() : null;
+        return $customerName ? $customerName->getData('firstname') : null;
     }
 
     /**
      * Returns customer last name for billing address
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getBillingAddressLastname()
     {
         $customerName = $this->_extractCustomerNameFromAmazonAddress($this->_getAmazonBillingAddress());
-        return $customerName ? $customerName->getLastname() : null;
+        return $customerName ? $customerName->getData('lastname') : null;
     }
 
     /**
      * Returns billing address street lines
      *
      * @return array|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getBillingAddressLines()
     {
@@ -598,6 +593,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns billing address city
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getBillingAddressCity()
     {
@@ -608,6 +604,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns billing address postal code
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getBillingAddressPostalCode()
     {
@@ -618,6 +615,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns billing address country code
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getBillingAddressCountryCode()
     {
@@ -628,6 +626,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns customer phone for billing address
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getBillingAddressPhone()
     {
@@ -638,6 +637,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns customer first name for shipping address
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getShippingAddressFirstname()
     {
@@ -649,6 +649,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns customer last name for shipping address
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getShippingAddressLastname()
     {
@@ -660,6 +661,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns shipping address street lines
      *
      * @return array|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getShippingAddressLines()
     {
@@ -670,6 +672,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns shipping address city
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getShippingAddressCity()
     {
@@ -680,6 +683,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns shipping address postal code
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getShippingAddressPostalCode()
     {
@@ -690,6 +694,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns shipping address country code
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getShippingAddressCountryCode()
     {
@@ -700,6 +705,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Returns customer phone for shipping address
      *
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getShippingAddressPhone()
     {
@@ -708,6 +714,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getMagentoTransactionState()
     {
@@ -716,6 +723,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getMagentoTransactionReasonCode()
     {
@@ -724,6 +732,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getMagentoTransactionOrderLanguage()
     {
@@ -732,6 +741,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return null|string
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getMagentoChildTransactionType()
     {
@@ -766,6 +776,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getCreditmemoState()
     {
@@ -778,6 +789,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return string|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getInvoiceState()
     {
@@ -790,6 +802,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return array|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getPaymentFlags()
     {
@@ -802,6 +815,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
 
     /**
      * @return null|string
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getTransactionalEmailToSend()
     {
@@ -821,6 +835,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Checks whether Magento order data should be updated
      *
      * @return bool
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function shouldUpdateOrderData()
     {
@@ -834,6 +849,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Checks whether Magento payment transaction should be updated
      *
      * @return bool
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function shouldUpdateTransaction()
     {
@@ -846,6 +862,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Checks whether Magento payment transaction should be closed
      *
      * @return bool
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function shouldCloseTransaction()
     {
@@ -856,6 +873,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Checks whether parent transaction should be updated
      *
      * @return bool
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function shouldUpdateParentTransaction()
     {
@@ -871,6 +889,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Checks whether parent transaction should be updated
      *
      * @return bool
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function shouldCloseOrderTransaction()
     {
@@ -885,6 +904,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * Checks whether transaction is eligible for data polling
      *
      * @return bool
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function shouldPollData()
     {
@@ -910,6 +930,7 @@ class Creativestyle_AmazonPayments_Model_Processor_Transaction
      * field of the payment transaction entity in Magento
      *
      * @return array|null
+     * @throws Creativestyle_AmazonPayments_Exception
      */
     public function getRawDetails()
     {

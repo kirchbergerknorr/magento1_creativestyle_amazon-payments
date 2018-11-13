@@ -16,6 +16,21 @@
  */
 ?>
 <?php /** @var Creativestyle_AmazonPayments_Block_Js $this */ ?>
+<?php if ($this->isOnePageCheckout()) : ?>
+<?php
+    $continueLabel = $this->helper('core')->quoteEscape($this->helper('checkout')->__('Continue'));
+    $loadingNextStepLabel = $this->helper('core')->quoteEscape($this->__('Please wait, loading...'));
+    $ajaxLoaderImgUrl = $this->getSkinUrl('images/opc-ajax-loader.gif');
+?>
+    <script type="text/javascript" src="<?php echo $this->getSkinUrl('creativestyle/js/opcheckout_lpa.js'); ?>"></script>
+    <script type="text/javascript">
+        AmazonPaymentsOPC.init(checkout, billing, shipping, shippingMethod, payment, {
+            live: <?php echo $this->isSandboxActive() ? 'false' : 'true' ?>,
+            continueButtonLabel: '<?php echo $continueLabel; ?>',
+            pleaseWait: '<img src="<?php echo $ajaxLoaderImgUrl; ?>" alt="<?php echo $loadingNextStepLabel; ?>" title="<?php echo $loadingNextStepLabel; ?>" class="v-middle" /> <?php echo $loadingNextStepLabel; ?>'
+        });
+    </script>
+<?php endif; ?>
 <script type="text/javascript" src="<?php echo $this->getJsUrl('creativestyle/amazonpayments.min.js'); ?>"></script>
 <script type="text/javascript">
     AmazonPayments.setup(<?php echo $this->getJsConfig(); ?>);
@@ -32,6 +47,12 @@
                 responsive: true,
                 urls: <?php echo $this->getCheckoutUrls(); ?>
 
+            })
+<?php endif; ?>
+<?php if ($this->isOnePageCheckout()) : ?>
+            .initOnepageCheckout({
+                responsive: true,
+                urls: <?php echo $this->getCheckoutUrls(); ?>
             })
 <?php endif; ?>
         ;

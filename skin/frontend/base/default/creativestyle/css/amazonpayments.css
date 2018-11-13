@@ -182,3 +182,14 @@ ol.apa {
 }
 .apa .discount {
 }
+
+#opc-lpa #addressBookWidgetDiv,
+#opc-lpa #walletWidgetDiv {
+    display: inline-block;
+    height: 300px;
+    width: 49%;
+}
+
+#opc-lpa #addressBookWidgetDiv {
+    margin-right: 2%;
+}

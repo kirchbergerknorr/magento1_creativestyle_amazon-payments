@@ -23,6 +23,16 @@ class Creativestyle_AmazonPayments_Block_Adminhtml_Info extends Mage_Adminhtml_B
 
     protected function _getInfo()
     {
+        if (!$this->getChild('amazonpayments_about')) {
+            $this->setChild(
+                'amazonpayments_about',
+                $this->getLayout()
+                    ->createBlock('core/template')
+                    ->setTemplate('creativestyle/amazonpayments/info/about.phtml')
+                    ->setHtmlId('amazonpayments-about')
+            );
+        }
+
         if (!$this->getChild('amazonpayments_register')) {
             $this->setChild(
                 'amazonpayments_register',
@@ -57,6 +67,15 @@ class Creativestyle_AmazonPayments_Block_Adminhtml_Info extends Mage_Adminhtml_B
         }
 
         return $this->_storeCollection;
+    }
+
+    public function getAboutHtml()
+    {
+        if ($this->getChild('amazonpayments_about')) {
+            return $this->getChild('amazonpayments_about')->toHtml();
+        }
+
+        return '';
     }
 
     public function getRegisterHtml()

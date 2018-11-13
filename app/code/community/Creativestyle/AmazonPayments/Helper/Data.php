@@ -95,6 +95,21 @@ class Creativestyle_AmazonPayments_Helper_Data extends Mage_Core_Helper_Abstract
         );
     }
 
+    public function isOnePageCheckout()
+    {
+        $request = Mage::app()->getRequest();
+        $module = strtolower($request->getModuleName());
+        $controller = strtolower($request->getControllerName());
+        $action = strtolower($request->getActionName());
+        $lpa = $request->getParam('lpa', null);
+        if ($module == 'checkout' && $controller == 'onepage'
+            && ($lpa || $action == 'savepayment')) {
+            return true;
+        }
+
+        return false;
+    }
+
     /**
      * Splits customer name into first and last name
      * and returns it as an object

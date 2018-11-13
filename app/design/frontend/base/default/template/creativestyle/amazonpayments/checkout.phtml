@@ -20,6 +20,11 @@
     if (!window.Review)
         var Review = function() {};
 </script>
+<script type="text/javascript">//<![CDATA[
+    var quoteBaseGrandTotal = <?php echo $this->getQuoteBaseGrandTotal(); ?>;
+    var checkQuoteBaseGrandTotal = quoteBaseGrandTotal;
+    var lastPrice;
+//]]></script>
 <div class="page-title">
     <h1><?php echo $this->__('Amazon Pay'); ?></h1>
 </div>

@@ -203,3 +203,14 @@ ol.apa {
 .product-view .add-to-cart-buttons .payButtonWidget img {
     margin: 0 auto;
 }
+
+#opc-lpa #addressBookWidgetDiv,
+#opc-lpa #walletWidgetDiv {
+    display: inline-block;
+    height: 300px;
+    width: 49%;
+}
+
+#opc-lpa #addressBookWidgetDiv {
+    margin-right: 2%;
+}

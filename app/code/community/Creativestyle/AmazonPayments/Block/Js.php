@@ -71,12 +71,9 @@ class Creativestyle_AmazonPayments_Block_Js extends Creativestyle_AmazonPayments
                 'design' => $this->getLoginButtonDesignParams()
             ) : null,
             'checkoutUrl' => $this->getCheckoutUrl(),
-            'addToCartUrl' => $this->getAddToCartUrl()
+            'addToCartUrl' => $this->getAddToCartUrl(),
+            'currency' => Mage::app()->getStore()->getBaseCurrencyCode()
         );
-
-        if ($this->_getConfig()->isMultiCurrencyEnabled()) {
-            $jsConfig['currency'] = Mage::app()->getStore()->getBaseCurrencyCode();
-        }
 
         return $this->helper('core')->jsonEncode($jsConfig);
     }
@@ -194,5 +191,10 @@ class Creativestyle_AmazonPayments_Block_Js extends Creativestyle_AmazonPayments
             'failure' => $this->getUrl('checkout/cart')
         );
         return $this->_jsonEncode($urls);
+    }
+
+    public function isOnePageCheckout()
+    {
+        return $this->helper('amazonpayments')->isOnePageCheckout();
     }
 }
