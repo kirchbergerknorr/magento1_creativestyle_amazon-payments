@@ -20,6 +20,7 @@ js/creativestyle/adminhtml/amazonpayments.min.js    js/creativestyle/adminhtml/a
 js/creativestyle/vendors/prism.js   js/creativestyle/vendors/prism.js
 js/creativestyle/amazonpayments.min.js  js/creativestyle/amazonpayments.min.js
 js/creativestyle/amazonpayments.toolbox.min.js  js/creativestyle/amazonpayments.toolbox.min.js
+lib/AmazonPay   lib/AmazonPay
 lib/OffAmazonPayments   lib/OffAmazonPayments
 lib/OffAmazonPaymentsNotifications  lib/OffAmazonPaymentsNotifications
 lib/OffAmazonPaymentsService    lib/OffAmazonPaymentsService
@@ -36,6 +37,7 @@ skin/frontend/base/default/creativestyle/css/amazonpayments-responsive-widgets.c
 skin/frontend/base/default/creativestyle/css/amazonpayments-widgets.css skin/frontend/base/default/creativestyle/css/amazonpayments-widgets.css
 skin/frontend/base/default/creativestyle/images/amazon-loading-large.gif    skin/frontend/base/default/creativestyle/images/amazon-loading-large.gif
 skin/frontend/base/default/creativestyle/images/logo_a-glyph_1x.png skin/frontend/base/default/creativestyle/images/logo_a-glyph_1x.png
+skin/frontend/base/default/creativestyle/js/opcheckout_lpa.js skin/frontend/base/default/creativestyle/js/opcheckout_lpa.js
 skin/frontend/rwd/default/creativestyle/css/amazonpayments.css  skin/frontend/rwd/default/creativestyle/css/amazonpayments.css
 skin/frontend/rwd/default/creativestyle/css/amazonpayments-responsive-widgets.css   skin/frontend/rwd/default/creativestyle/css/amazonpayments-responsive-widgets.css
 skin/frontend/rwd/default/creativestyle/images/amazon-loading-large.gif skin/frontend/rwd/default/creativestyle/images/amazon-loading-large.gif
